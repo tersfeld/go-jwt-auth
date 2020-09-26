@@ -7,14 +7,8 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
-func TestGenerateJWT(t *testing.T) {
-	claims := JWTClaims{Username: "test", Type: "4"}
-	generatedToken, err := GenerateJWT(claims, 60)
-	if err != nil {
-		t.Errorf("Error while generating a JWT %s", err.Error())
-	}
-
-	token, err := jwt.ParseWithClaims(generatedToken, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+func validateTestToken(t *testing.T, tokenStr string) JWTClaims {
+	token, err := jwt.ParseWithClaims(tokenStr, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
 	if err != nil {
@@ -25,11 +19,41 @@ func TestGenerateJWT(t *testing.T) {
 		t.Errorf("Token is not valid")
 	}
 
-	if c, ok := token.Claims.(*JWTClaims); !ok {
+	c, ok := token.Claims.(*JWTClaims)
+	if !ok {
 		t.Errorf("Token doesn't have the proper claims")
-	} else {
-		if claims.Username != c.Username || claims.Type != c.Type {
-			t.Errorf("Tokens don't match")
-		}
+	}
+	return *c
+}
+
+func generateTestToken(t *testing.T) (string, JWTClaims) {
+	claims := JWTClaims{Username: "test", Type: "4"}
+	generatedToken, err := GenerateJWT(claims, 60)
+	if err != nil {
+		t.Errorf("Error while generating a JWT %s", err.Error())
+	}
+
+	c := validateTestToken(t, generatedToken)
+	if claims.Username != c.Username || claims.Type != c.Type {
+		t.Errorf("Tokens don't match")
+	}
+	return generatedToken, c
+}
+
+func TestGenerateJWT(t *testing.T) {
+	generateTestToken(t)
+}
+
+func TestRefreshJWT(t *testing.T) {
+	generatedToken, generatedTokenClaims := generateTestToken(t)
+
+	refreshedToken, err := RefreshJWT(generatedToken, 30)
+	if err != nil {
+		t.Errorf("Error while refreshing a JWT %s", err.Error())
+	}
+
+	refreshedTokenClaims := validateTestToken(t, refreshedToken)
+	if refreshedTokenClaims.Username != generatedTokenClaims.Username || refreshedTokenClaims.Type != generatedTokenClaims.Type {
+		t.Errorf("Tokens don't match")
 	}
 }
