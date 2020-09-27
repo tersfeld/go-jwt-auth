@@ -27,7 +27,7 @@ func validateTestToken(t *testing.T, tokenStr string) JWTClaims {
 }
 
 func generateTestToken(t *testing.T) (string, JWTClaims) {
-	claims := JWTClaims{Username: "test", Type: "4"}
+	claims := JWTClaims{Username: "test", Type: "1", Permissions: map[string][]string{"teamId": {"12345"}}}
 	generatedToken, err := GenerateJWT(claims, 60)
 	if err != nil {
 		t.Errorf("Error while generating a JWT %s", err.Error())
